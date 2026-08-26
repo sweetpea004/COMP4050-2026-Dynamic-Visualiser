@@ -33,3 +33,6 @@ These are requirements that surpass the MVP
 | Requirement ID | Title | Description |
 | ----- | ----- | ---------- |
 | Req08 | Presenting Each Box with LEGO-like Instructions | The user SHALL be able to click a button on the aside UI to view the step-by-step packing order of a single box with progression bar, side arrows to step through, and exit button. |
+
+## Architecture
+
