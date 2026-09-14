@@ -32,7 +32,8 @@ These are requirements that surpass the MVP
 | Requirement ID | Title | Description |
 | ----- | ----- | ---------- |
 | Req08 | Return to Portal Functionality | The UI will display a "DONE" and a "CANCEL" button to return to the Portal Page; it will return the values String OrderID and Bool Complete. |
-| Req09 | Presenting Each Box with LEGO-like Instructions | The user SHALL be able to click a button on the aside UI to view the step-by-step packing order of a single box with progression bar, side arrows to step through, and exit button. |
+| Req09 | Presenting Each Box Individually | The aside UI SHALL allow the user to view any single box on its own, with a back button to return to the view of all boxes |
+| Req10 | Presenting Each Box with LEGO-like Instructions | The user SHALL be able to step through a step-by-step packing order of a single box with a progression bar, side arrows to step through, and an exit button. (Requires Req09 to be completed) |
 
 ## Architecture
 
