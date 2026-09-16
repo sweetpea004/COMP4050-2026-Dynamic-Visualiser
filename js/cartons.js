@@ -100,7 +100,7 @@ function createCartonMesh( carton ) {
   const cartonMaterial = new THREE.MeshStandardMaterial( {
     color: 0x404040,
     transparent: true,
-    opacity: 0.20,
+    opacity: 0.15,
     side: THREE.DoubleSide,
     depthWrite: false,
   } );
