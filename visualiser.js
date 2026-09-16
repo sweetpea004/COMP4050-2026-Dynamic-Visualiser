@@ -38,6 +38,25 @@ controls.touches = {
   TWO: THREE.TOUCH.DOLLY_PAN // 2 finger to zoom + pan
 };
 
+/* Cartons are laid out along +X. Keep the orbit pivot on that row's
+ * centreline (locked Y/Z from the layout bounds) so pan can slide along
+ * the row while rotate/dolly still orbit the cartons, not a drifted point. */
+const rowOrbitCentre = new THREE.Vector3();
+let constrainOrbitToRow = false;
+
+function constrainOrbitTargetToRow() {
+  if ( !constrainOrbitToRow ) {
+    return;
+  }
+
+  const dy = rowOrbitCentre.y - controls.target.y;
+  const dz = rowOrbitCentre.z - controls.target.z;
+  controls.target.y = rowOrbitCentre.y;
+  controls.target.z = rowOrbitCentre.z;
+  camera.position.y += dy;
+  camera.position.z += dz;
+}
+
 /* Lighting */
 const ambientLight = new THREE.AmbientLight( 0xffffff, 0.6 );
 scene.add( ambientLight );
@@ -436,6 +455,8 @@ function frameCameraOnObject( object, cartons ) {
   const distance = Math.max( maxCartonDim * 1.6, 1 );
   camera.position.copy( centre ).add( new THREE.Vector3( distance * 0.85, distance * 0.65, distance * 0.85 ) );
   controls.target.copy( centre );
+  rowOrbitCentre.copy( centre );
+  constrainOrbitToRow = true;
   controls.update();
 }
 
@@ -512,6 +533,7 @@ window.addEventListener( 'resize', () => {
 
 function animate( time ) {
   controls.update();
+  constrainOrbitTargetToRow();
   renderer.render( scene, camera );
   labelRenderer.render( scene, camera );
 }
