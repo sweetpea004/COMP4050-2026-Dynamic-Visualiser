@@ -10,6 +10,7 @@ import { loadSceneData, solutionSource } from './js/solution.js';
 
 startRenderLoop();
 
+/** Carton Groups vs Single Carton */
 let cartonGroups = [];
 let cartonsGroup = null;
 let loadedCartons = [];
@@ -17,9 +18,12 @@ let loadedRejects = [];
 let focusedCartonIndex = null;
 
 function visibleCartonObject() {
+  // Show all cartons grouped
   if ( focusedCartonIndex === null ) {
     return cartonsGroup;
   }
+
+  // one carton selected
   return cartonGroups[ focusedCartonIndex ];
 }
 
@@ -66,6 +70,7 @@ function buildSceneFromData( data ) {
     scene.remove( cartonsGroup );
   }
 
+  /** Scene Data */
   loadedCartons = data.cartons ?? [];
   loadedRejects = data.rejects ?? [];
 
