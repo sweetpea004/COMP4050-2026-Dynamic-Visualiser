@@ -48,14 +48,13 @@ function rejectItemsHtml( rejects ) {
   return rejects.map( ( reject ) => {
     return `
       <li class="placement-info-item">
-        <span class="placement-info-text">
-          <span class="placement-info-ref">${ reject.item_ref }</span>
-          <span class="placement-info-label">
-            ${ reject.reason_code }
-            </br>
-            ${ reject.message }
-          </span>
-        </span>
+        <div class="placement-info-text">
+          <p class="placement-info-ref">${ reject.item_ref }</p>
+          <div class="placement-info-label">
+            <p>${ reject.reason_code }</p>
+            <p>${ reject.message }</p>
+          </div>
+        </div>
       </li>
     `;
   } ).join( '' );
@@ -63,11 +62,13 @@ function rejectItemsHtml( rejects ) {
 
 function rejectsSectionHtml( rejects ) {
   return `
-    <span class="carton-info-heading"><strong>Rejected Items</strong></span>
-    ${ rejects.length > 0
-      ? `<ul class="placement-info-list">${ rejectItemsHtml( rejects ) }</ul>`
-      : '<p class="placement-info-empty">No Rejected Items</p>'
-    }
+    <section aria-labelledby="rejected-items-heading">
+      <h2 id="rejected-items-heading" class="carton-info-heading"><strong>Rejected Items</strong></h2>
+      ${ rejects.length > 0
+        ? `<ul class="placement-info-list">${ rejectItemsHtml( rejects ) }</ul>`
+        : '<p class="placement-info-empty">No Rejected Items</p>'
+      }
+    </section>
   `;
 }
 
@@ -86,12 +87,12 @@ function placementItemsHtml( placements, startIndex ) {
           aria-label="Highlight ${ placement.item_ref }"
         >
         <span class="placement-swatch" style="background-color: ${ colorHex }" aria-hidden="true"></span>
-        <span class="placement-info-text">
-          <span class="placement-info-ref">${ placement.item_ref }</span>
-          <span class="placement-info-label">
-            ${ placement.label }
-            </br>Weight: ${ ( placement.mass / 1000 ).toFixed( 3 ) } kg
-            </br> ${ placement.tags.length > 0
+        <div class="placement-info-text">
+          <p class="placement-info-ref">${ placement.item_ref }</p>
+          <div class="placement-info-label">
+            <p>${ placement.label }</p>
+            <p>Weight: ${ ( placement.mass / 1000 ).toFixed( 3 ) } kg</p>
+            ${ placement.tags.length > 0
               ? `<ul class="placement-info-tags">${ placement.tags.map( ( tag ) => {
                 return `
                   <li>${ tag }</li>
@@ -99,8 +100,8 @@ function placementItemsHtml( placements, startIndex ) {
               } ).join( '' ) }</ul>`
               : ''
             }
-          </span>
-        </span>
+          </div>
+        </div>
       </li>
     `;
   } ).join( '' );
@@ -109,17 +110,17 @@ function placementItemsHtml( placements, startIndex ) {
 function cartonHeadingHtml( carton ) {
   const [ x, y, z ] = carton.inner_dims;
   return `
-    <span class="carton-info-main">
-      <span class="carton-info-heading">
-        <span class="carton-info-id"><strong>${ carton.carton_id }</strong></span>
+    <hgroup class="carton-info-main">
+      <h2 class="carton-info-heading">
+        <strong class="carton-info-id">${ carton.carton_id }</strong>
         ${ carton.sku }
-      </span>
-      <span class="carton-info-dims">
+      </h2>
+      <p class="carton-info-dims">
         ${ x } × ${ y } × ${ z } mm
-        </br>
+        <br>
         Total Weight: ${ ( carton.contents_mass / 1000 ).toFixed( 3 ) } kg
-      </span>
-    </span>
+      </p>
+    </hgroup>
   `;
 }
 
@@ -132,15 +133,15 @@ function cartonContentsHtml( placements, startIndex ) {
 function cartonEntryHtml( carton, cartonIndex, startIndex, { showIsolateButton, collapsible, open } ) {
   const placements = carton.placements ?? [];
   const isolateButton = showIsolateButton
-    ? `<button type="button" class="carton-action-btn carton-isolate-btn" data-carton-index="${ cartonIndex }" aria-label="Isolate ${ carton.carton_id }">Isolate</button>`
+    ? `<button type="button" class="carton-action-btn carton-isolate-btn" data-carton-index="${ cartonIndex }" aria-label="Focus on box ${ carton.carton_id }">Focus</button>`
     : '';
 
   if ( !collapsible ) {
     return `
       <article class="carton-info-entry carton-info-entry-isolated">
-        <div class="carton-info-summary">
+        <header class="carton-info-summary">
           ${ cartonHeadingHtml( carton ) }
-        </div>
+        </header>
         ${ cartonContentsHtml( placements, startIndex ) }
       </article>
     `;
@@ -153,7 +154,7 @@ function cartonEntryHtml( carton, cartonIndex, startIndex, { showIsolateButton, 
         <span class="carton-entry-actions">
           ${ isolateButton }
           <span class="carton-action-btn carton-expand-btn" aria-hidden="true">
-            <span class="carton-expand-label">Expand</span>
+            <span class="carton-expand-label">Contents</span>
             <span class="carton-collapse-label">Collapse</span>
           </span>
         </span>
@@ -171,7 +172,7 @@ export function updateCartonInfoUI( cartons, rejects, focusedCartonIndex = null 
   if ( cartons.length === 0 ) {
     panel.innerHTML = `
       <p class="carton-info-empty">No cartons in this solution.</p>
-      </br>
+      <br>
       ${ rejectsSectionHtml( rejects ) }
     `;
     return;
@@ -206,7 +207,7 @@ export function updateCartonInfoUI( cartons, rejects, focusedCartonIndex = null 
   } ).join( '' );
 
   content += `
-    </br>
+    <br>
     ${ rejectsSectionHtml( rejects ) }
   `;
 
@@ -219,8 +220,7 @@ export function renderCartonInfoError( error ) {
   }
 
   panel.innerHTML = `
-    <h1>Error: ${ error.status == 404 ? `File Not Found` : `Failure to Load` }</h1>
-    </br>
+    <h2 class="carton-info-heading"><strong>Error: ${ error.status == 404 ? `File Not Found` : `Failure to Load` }</strong></h2>
     <p>Please return and try again</p>
   `;
 }
