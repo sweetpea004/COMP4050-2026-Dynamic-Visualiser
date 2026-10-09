@@ -153,10 +153,15 @@ function cartonEntryHtml( carton, cartonIndex, startIndex, { showIsolateButton, 
         ${ cartonHeadingHtml( carton ) }
         <span class="carton-entry-actions">
           ${ isolateButton }
-          <span class="carton-action-btn carton-expand-btn" aria-hidden="true">
+          <button
+            type="button"
+            class="carton-action-btn carton-expand-btn"
+            aria-expanded="${ open ? 'true' : 'false' }"
+            aria-label="Contents of box ${ carton.carton_id }"
+          >
             <span class="carton-expand-label">Contents</span>
             <span class="carton-collapse-label">Collapse</span>
-          </span>
+          </button>
         </span>
       </summary>
       ${ cartonContentsHtml( placements, startIndex ) }
@@ -238,7 +243,23 @@ function bindCartonInfoEvents() {
     }
   } );
 
+  panel.addEventListener( 'toggle', ( event ) => {
+    const entry = event.target;
+    if ( !( entry instanceof HTMLDetailsElement ) ) {
+      return;
+    }
+    entry.querySelector( '.carton-expand-btn' )?.setAttribute( 'aria-expanded', entry.open ? 'true' : 'false' );
+  }, true );
+
   panel.addEventListener( 'click', ( event ) => {
+    const expandButton = event.target.closest( '.carton-expand-btn' );
+    if ( expandButton ) {
+      event.preventDefault();
+      const entry = expandButton.closest( 'details' );
+      entry.open = !entry.open;
+      return;
+    }
+
     const isolateButton = event.target.closest( '.carton-isolate-btn' );
     if ( isolateButton ) {
       event.preventDefault();

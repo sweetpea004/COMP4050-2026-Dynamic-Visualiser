@@ -94,7 +94,8 @@ canvas {
 }
 
 .carton-isolate-btn,
-.carton-back-btn {
+.carton-back-btn,
+.carton-expand-btn {
   cursor: pointer;
 }
 
