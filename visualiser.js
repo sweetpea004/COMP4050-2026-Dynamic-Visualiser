@@ -7,6 +7,7 @@ import {
 import { buildCartonGroups, resetCartonBuildState, setCartonGroupVisible } from './js/cartons.js';
 import { initCartonInfo, renderCartonInfoError, updateCartonInfoUI } from './js/cartonInfo.js';
 import { loadSceneData, solutionSource } from './js/solution.js';
+import { initPortalActions } from './js/portalActions.js';
 
 startRenderLoop();
 
@@ -16,6 +17,7 @@ let cartonsGroup = null;
 let loadedCartons = [];
 let loadedRejects = [];
 let focusedCartonIndex = null;
+let loadedOrderId = null;
 
 function visibleCartonObject() {
   // Show all cartons grouped
@@ -62,6 +64,11 @@ initCartonInfo( {
   onShowAll: showAllCartons,
 } );
 
+const portalActions = initPortalActions( {
+  canvas,
+  getOrderId: () => loadedOrderId,
+} );
+
 function buildSceneFromData( data ) {
   resetCartonBuildState();
   focusedCartonIndex = null;
@@ -73,6 +80,7 @@ function buildSceneFromData( data ) {
   /** Scene Data */
   loadedCartons = data.cartons ?? [];
   loadedRejects = data.rejects ?? [];
+  loadedOrderId = data.order_id ?? null;
 
   const built = buildCartonGroups( loadedCartons );
   cartonsGroup = built.cartonsGroup;
@@ -88,4 +96,5 @@ loadSceneData( jsonFileName )
   .catch( ( error ) => {
     console.error( error );
     renderCartonInfoError( error );
+    portalActions?.setEnabled( false );
   } );

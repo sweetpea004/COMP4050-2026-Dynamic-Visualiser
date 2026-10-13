@@ -228,14 +228,147 @@ canvas {
   white-space: nowrap;
 }
 
+/* Req06: Return to Portal actions — top right on desktop */
+#portal-actions {
+  position: absolute;
+  top: 0.75rem;
+  right: 1rem;
+  z-index: 110;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.portal-action-btn {
+  min-height: 2.5rem;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.portal-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.portal-action-cancel {
+  border-color: #b8c2cc;
+  background: rgba(255, 255, 255, 0.94);
+  color: #1f2328;
+}
+
+.portal-action-cancel:hover:not(:disabled) {
+  background: #f4f7fa;
+}
+
+.portal-action-done {
+  background: #2c7a4b;
+  color: #ffffff;
+}
+
+.portal-action-done:hover:not(:disabled) {
+  background: #256640;
+}
+
+/* Confirmation dialog */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(31, 35, 40, 0.45);
+}
+
+.confirm-overlay[hidden] {
+  display: none;
+}
+
+.confirm-box {
+  width: 100%;
+  max-width: 24rem;
+  padding: 1.5rem;
+  border-radius: 0.6rem;
+  background: #ffffff;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.confirm-title {
+  margin: 0 0 0.6rem;
+  font-size: 1.15rem;
+}
+
+.confirm-message {
+  margin: 0 0 1.25rem;
+  color: #57606a;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.confirm-btn {
+  min-height: 2.4rem;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.confirm-btn-secondary {
+  border-color: #b8c2cc;
+  background: #ffffff;
+  color: #1f2328;
+}
+
+.confirm-btn-secondary:hover {
+  background: #f4f7fa;
+}
+
+.confirm-btn-primary {
+  background: #1f2328;
+  color: #ffffff;
+}
+
+.confirm-btn-primary:hover {
+  background: #33393f;
+}
+
 /* Mobile View */
 @media (max-width: 768px) {
   html {
     font-size: 18px;
   }
 
+  /* Req06: full-width bar at the very top, buttons side-by-side; the title
+     drops below it so the two don't overlap. */
+  #portal-actions {
+    top: 0.6rem;
+    right: 0.75rem;
+    left: 0.75rem;
+    justify-content: center;
+  }
+
+  .portal-action-btn {
+    flex: 1;
+    min-height: 2.75rem;
+  }
+
   h1 {
-    margin: 0.5rem 0.75rem;
+    margin: 4rem 0.75rem 0.5rem;
     font-size: 1rem;
   }
 
