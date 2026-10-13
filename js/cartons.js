@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 import { jsonDimsToThree, jsonMinCornerToThreeCenter } from './coords.js';
+import { createOrientationMarker } from './orientation.js';
 
 export const CARTON_GAP = 5; // cm between cartons when laying out 2+
 const CARTON_DIM_PADDING = 0.05; // cm added to each carton axis to avoid z-clipping with placements
@@ -11,11 +12,19 @@ const HIGHLIGHT_RENDER_ORDER = 20;
 let placementColorSeed = 0;
 const itemRefColors = new Map();
 const placementMeshes = [];
+const orientationMarkers = [];
 
 export function resetCartonBuildState() {
   placementColorSeed = 0;
   itemRefColors.clear();
   placementMeshes.length = 0;
+  orientationMarkers.length = 0;
+}
+
+export function setOrientationMarkersVisible( visible ) {
+  for ( const marker of orientationMarkers ) {
+    marker.visible = visible;
+  }
 }
 
 export function computeCartonLayouts( cartons ) {
@@ -156,6 +165,10 @@ function createPlacementMesh( placement ) {
   mesh.add( outline );
   mesh.userData.outline = outline;
   placementMeshes.push( mesh );
+
+  const orientationMarker = createOrientationMarker( placement.orientation ?? 0, width, height, depth );
+  mesh.add( orientationMarker );
+  orientationMarkers.push( orientationMarker );
 
   return mesh;
 }

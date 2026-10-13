@@ -4,7 +4,12 @@ import {
   scene,
   startRenderLoop,
 } from './js/scene.js';
-import { buildCartonGroups, resetCartonBuildState, setCartonGroupVisible } from './js/cartons.js';
+import {
+  buildCartonGroups,
+  resetCartonBuildState,
+  setCartonGroupVisible,
+  setOrientationMarkersVisible,
+} from './js/cartons.js';
 import { initCartonInfo, renderCartonInfoError, updateCartonInfoUI } from './js/cartonInfo.js';
 import { loadSceneData, solutionSource } from './js/solution.js';
 import { initPortalActions } from './js/portalActions.js';
@@ -18,6 +23,7 @@ let loadedCartons = [];
 let loadedRejects = [];
 let focusedCartonIndex = null;
 let loadedOrderId = null;
+let orientationVisible = false;
 
 function visibleCartonObject() {
   // Show all cartons grouped
@@ -46,7 +52,7 @@ function refreshCartonView() {
     fitViewToObject( object, visibleCartons() );
   }
 
-  updateCartonInfoUI( loadedCartons, loadedRejects, focusedCartonIndex );
+  updateCartonInfoUI( loadedCartons, loadedRejects, focusedCartonIndex, orientationVisible );
 }
 
 function viewCarton( cartonIndex ) {
@@ -59,9 +65,15 @@ function showAllCartons() {
   refreshCartonView();
 }
 
+function toggleOrientation( visible ) {
+  orientationVisible = visible;
+  setOrientationMarkersVisible( visible );
+}
+
 initCartonInfo( {
   onViewCarton: viewCarton,
   onShowAll: showAllCartons,
+  onToggleOrientation: toggleOrientation,
 } );
 
 const portalActions = initPortalActions( {
@@ -86,6 +98,7 @@ function buildSceneFromData( data ) {
   cartonsGroup = built.cartonsGroup;
   cartonGroups = built.cartonGroups;
   scene.add( cartonsGroup );
+  setOrientationMarkersVisible( orientationVisible );
 
   refreshCartonView();
 }
