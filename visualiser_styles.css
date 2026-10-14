@@ -28,6 +28,7 @@ canvas {
   top: 3rem;
   left: 1rem;
   z-index: 100;
+  box-sizing: border-box;
   min-width: 14rem;
   max-width: 18rem;
   max-height: calc(100vh - 4rem);
