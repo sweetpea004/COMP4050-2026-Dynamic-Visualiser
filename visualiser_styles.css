@@ -181,7 +181,9 @@ canvas {
   cursor: pointer;
 }
 
-.placement-info-item:has(.placement-highlight-toggle:checked) .placement-swatch {
+.placement-info-item:has(
+  .placement-highlight-toggle:checked
+) .placement-swatch {
   box-shadow: 0 0 0 2px #1f2328;
 }
 
@@ -228,10 +230,16 @@ canvas {
   white-space: nowrap;
 }
 
-/* Mobile View */
+/* Mobile Layout */
 @media (max-width: 768px) {
   html {
     font-size: 18px;
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
   }
 
   h1 {
@@ -239,7 +247,22 @@ canvas {
     font-size: 1rem;
   }
 
+  :root {
+    --mobile-panel-height: min(30dvh, 18rem);
+  }
+
+  /* Reserve space for the information panel */
+  #visualiser-canvas {
+    width: 100%;
+    height: calc(
+      100dvh - var(--mobile-panel-height) - 2.25rem
+    );
+    display: block;
+  }
+
+  /* Keep the panel below the 3D viewing area */
   #carton-info {
+    position: fixed;
     top: auto;
     right: 0.75rem;
     bottom: 0.75rem;
@@ -247,9 +270,11 @@ canvas {
     min-width: 0;
     max-width: none;
     width: auto;
-    max-height: min(42vh, 22rem);
+    height: var(--mobile-panel-height);
+    max-height: var(--mobile-panel-height);
     padding: 1rem;
     font-size: 1rem;
+    overflow-y: auto;
   }
 
   .carton-action-btn {
@@ -282,11 +307,8 @@ canvas {
   }
 }
 
+/* Smaller Mobile Screens */
 @media (max-width: 480px) {
-  #carton-info {
-    max-height: min(48vh, 24rem);
-  }
-
   .carton-info-summary {
     flex-direction: column;
     align-items: stretch;
