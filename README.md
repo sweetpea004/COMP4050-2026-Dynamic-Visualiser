@@ -10,12 +10,12 @@ A packer can rotate, pan and zoom around the cartons, focus on one carton at a t
 
 ## Team Contributors and Roles
 
-| Name | GitHub | Role |
-| ---- | ------ | ---- |
-| Emma Purvis | [@sweetpea004](https://github.com/sweetpea004) | _TBC_ |
-| Mohamad Halloum | [@Halloum578](https://github.com/Halloum578) | _TBC_ (automated testing & CI) |
-| _TBC_ | [@hotontheblock](https://github.com/hotontheblock) | _TBC_ |
-| _TBC_ | _TBC_ | _TBC_ |
+| Name | Role |
+| ---- | ---- |
+| Persephone | | Product Owner, Developer |
+| Mohamad || Minute Taker, Developer, Tester |
+| Aryan | | Scrum Master, Developer |
+| Sarah | Developer, Tester | |
 
 ## How to Use
 
