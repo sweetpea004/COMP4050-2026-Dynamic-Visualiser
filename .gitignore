@@ -33,3 +33,9 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# Test outputs
+coverage/
+test-results/
+playwright-report/
+blob-report/
