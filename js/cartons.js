@@ -155,7 +155,9 @@ function createPlacementMesh( placement ) {
   outline.visible = false;
   mesh.add( outline );
   mesh.userData.outline = outline;
-  placementMeshes.push( mesh );
+mesh.userData.packingColor = color.clone();
+mesh.userData.packingEdges = edges;
+placementMeshes.push( mesh );
 
   return mesh;
 }
@@ -165,11 +167,43 @@ export function createCartonGroup( carton, minCorner ) {
   group.position.copy( minCorner );
   group.add( createCartonMesh( carton ) );
 
+  group.userData.placementMeshes = [];
+
   for ( const placement of carton.placements ?? [] ) {
-    group.add( createPlacementMesh( placement ) );
+    const mesh = createPlacementMesh( placement );
+    group.add( mesh );
+    group.userData.placementMeshes.push( mesh );
   }
 
   return group;
+}
+
+// Highlight one item at a time for packing instructions.
+// Step 0 shows the completed carton with all items coloured.
+export function setCartonInstructionStep( group, step = 0 ) {
+  if ( !group ) return;
+
+  const meshes = group.userData.placementMeshes ?? [];
+
+  meshes.forEach( ( mesh, index ) => {
+    const dimmed = step > 0 && index !== step - 1;
+
+    const material = mesh.material;
+    const edges = mesh.userData.packingEdges.material;
+
+    material.color.copy( mesh.userData.packingColor );
+
+    if ( dimmed ) {
+      material.color.setHex( 0xa3aab3 );
+    }
+
+    material.transparent = dimmed;
+    material.opacity = dimmed ? 0.18 : 1;
+    material.depthWrite = !dimmed;
+
+    edges.transparent = dimmed;
+    edges.opacity = dimmed ? 0.12 : 1;
+  } );
 }
 
 export function setCartonGroupVisible( group, visible ) {
