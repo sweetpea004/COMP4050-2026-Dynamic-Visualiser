@@ -179,8 +179,13 @@ export function frameCameraOnObject(object, cartons) {
     camera.aspect
   );
 
-  const distance =
-    radius / Math.sin(limitingFov / 2) * 1.15;
+  // Allow extra space for the information panel on desktop
+  const framingMultiplier =
+  window.innerWidth > 768 && cartons.length === 1
+    ? 1.8
+    : 1.15;
+const distance =
+  radius / Math.sin(limitingFov / 2) * framingMultiplier;
 
   const direction = new THREE.Vector3(
     0.85,

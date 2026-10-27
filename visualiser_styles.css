@@ -426,3 +426,14 @@ canvas {
     font-size: 0.8rem;
   }
 }
+
+/* Keep LEGO controls above the carton on mobile */
+@media (max-width: 768px) {
+  #packing-steps {
+    bottom: auto;
+  }
+
+  .packing-step-nav {
+    margin-top: 0.5rem;
+  }
+}
