@@ -63,12 +63,21 @@ function constrainOrbitTargetToRow() {
     return;
   }
 
-  const dy = rowOrbitCentre.y - controls.target.y;
+  // Isolated mobile pans up and down. Other views pan along the carton row.
+  const verticalPan = packingCoveredFraction() > 0;
+  const dx = verticalPan ? rowOrbitCentre.x - controls.target.x : 0;
+  const dy = verticalPan ? 0 : rowOrbitCentre.y - controls.target.y;
   const dz = rowOrbitCentre.z - controls.target.z;
 
-  controls.target.y = rowOrbitCentre.y;
+  if (verticalPan) {
+    controls.target.x = rowOrbitCentre.x;
+  } else {
+    controls.target.y = rowOrbitCentre.y;
+  }
+
   controls.target.z = rowOrbitCentre.z;
 
+  camera.position.x += dx;
   camera.position.y += dy;
   camera.position.z += dz;
 }
@@ -179,18 +188,21 @@ export function frameCameraOnObject(object, cartons) {
     camera.aspect
   );
 
-  // Allow extra space for the information panel on desktop
+  // Allow extra space for the information panel on desktop.
   const framingMultiplier =
-  window.innerWidth > 768 && cartons.length === 1
-    ? 1.8
-    : 1.15;
-const distance =
-  radius / Math.sin(limitingFov / 2) * framingMultiplier;
+    window.innerWidth > 768 && cartons.length === 1
+      ? 1.8
+      : 1.15;
 
+  const distance =
+    radius / Math.sin(limitingFov / 2) * framingMultiplier;
+
+  // A higher viewpoint on mobile keeps the carton under the packing bars.
+  const mobilePacking = packingCoveredFraction() > 0;
   const direction = new THREE.Vector3(
-    0.85,
-    0.65,
-    0.85
+    0.6,
+    mobilePacking ? 1.85 : 0.65,
+    0.6
   ).normalize();
 
   camera.position
@@ -212,9 +224,124 @@ const distance =
   controls.target.copy(centre);
   rowOrbitCentre.copy(centre);
 
+  if (mobilePacking) {
+    seatCartonBase(box, radius);
+    rowOrbitCentre.copy(controls.target);
+  }
+
   constrainOrbitToRow = true;
 
   controls.update();
+}
+
+/* Share of the canvas covered by the packing bars, from the top. */
+function packingCoveredFraction() {
+  if (window.innerWidth > 768) {
+    return 0;
+  }
+
+  const packing = document.getElementById('packing-steps');
+
+  if (!packing || packing.hidden) {
+    return 0;
+  }
+
+  const canvasRect = canvas.getBoundingClientRect();
+  const packingRect = packing.getBoundingClientRect();
+
+  if (canvasRect.height <= 0) {
+    return 0;
+  }
+
+  const overlap = Math.min(packingRect.bottom, canvasRect.bottom)
+    - Math.max(packingRect.top, canvasRect.top);
+
+  return Math.max(0, overlap) / canvasRect.height;
+}
+
+function screenUpDirection() {
+  const forward = new THREE.Vector3()
+    .subVectors(controls.target, camera.position)
+    .normalize();
+
+  const right = new THREE.Vector3()
+    .crossVectors(forward, camera.up)
+    .normalize();
+
+  if (right.lengthSq() < 1e-8) {
+    return new THREE.Vector3(0, 1, 0);
+  }
+
+  return new THREE.Vector3()
+    .crossVectors(right, forward)
+    .normalize();
+}
+
+/* Put the carton base at the bottom of the canvas, below the packing bars. */
+function seatCartonBase(box, radius) {
+  const fraction = packingCoveredFraction();
+
+  if (fraction <= 0) {
+    return;
+  }
+
+  const base = new THREE.Vector3(
+    (box.min.x + box.max.x) / 2,
+    box.min.y,
+    (box.min.z + box.max.z) / 2,
+  );
+  const top = new THREE.Vector3(
+    (box.min.x + box.max.x) / 2,
+    box.max.y,
+    (box.min.z + box.max.z) / 2,
+  );
+
+  // Keep the floor near the bottom edge and the lid clear of the packing bars.
+  const desiredBase = -0.9;
+  const clearTop = 1 - fraction * 2 - 0.22;
+
+  for (let pass = 0; pass < 8; pass++) {
+    camera.updateMatrixWorld();
+
+    const baseY = base.clone().project(camera).y;
+    const topY = top.clone().project(camera).y;
+    const distance = camera.position.distanceTo(controls.target);
+    const visibleHeight = 2 * distance * Math.tan(
+      THREE.MathUtils.degToRad(camera.fov) / 2
+    );
+
+    if (topY > clearTop) {
+      const span = Math.max(0.05, topY - baseY);
+      const available = Math.max(0.2, clearTop - desiredBase);
+      const offset = new THREE.Vector3()
+        .subVectors(camera.position, controls.target);
+
+      camera.position
+        .copy(controls.target)
+        .addScaledVector(
+          offset.normalize(),
+          distance * Math.max(span / available, 1.08),
+        );
+
+      continue;
+    }
+
+    if (Math.abs(baseY - desiredBase) < 0.02) {
+      break;
+    }
+
+    const worldShift = ((baseY - desiredBase) / 2) * visibleHeight;
+    const screenUp = screenUpDirection();
+
+    controls.target.addScaledVector(screenUp, worldShift);
+    camera.position.addScaledVector(screenUp, worldShift);
+  }
+
+  const seatedDistance = camera.position.distanceTo(controls.target);
+
+  camera.near = Math.max(0.1, seatedDistance / 1000);
+  camera.far = Math.max(1000, seatedDistance + radius * 4);
+  camera.updateProjectionMatrix();
 }
 
 /* Fit platform and camera to selected cartons */

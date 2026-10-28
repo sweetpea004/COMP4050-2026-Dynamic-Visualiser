@@ -7,6 +7,10 @@ import { jsonDimsToThree, jsonMinCornerToThreeCenter } from './coords.js';
 export const CARTON_GAP = 5; // cm between cartons when laying out 2+
 const CARTON_DIM_PADDING = 0.05; // cm added to each carton axis to avoid z-clipping with placements
 const HIGHLIGHT_RENDER_ORDER = 20;
+// Non-current packing boxes are a faint unlit glass so the current step stays visible through them.
+const DIMMED_FILL = 0xf7f9fb;
+const DIMMED_FILL_OPACITY = 0.06;
+const DIMMED_EDGE_OPACITY = 0.28;
 
 let placementColorSeed = 0;
 const itemRefColors = new Map();
@@ -191,18 +195,26 @@ export function setCartonInstructionStep( group, step = 0 ) {
     const material = mesh.material;
     const edges = mesh.userData.packingEdges.material;
 
-    material.color.copy( mesh.userData.packingColor );
-
     if ( dimmed ) {
-      material.color.setHex( 0xa3aab3 );
+      // Black diffuse plus a light emissive ignores scene lighting, so shadowed faces
+      // do not turn into a grey wall in front of the current step.
+      material.color.setHex( 0x000000 );
+      material.emissive.setHex( DIMMED_FILL );
+    } else {
+      material.color.copy( mesh.userData.packingColor );
+      material.emissive.setHex( 0x000000 );
     }
 
     material.transparent = dimmed;
-    material.opacity = dimmed ? 0.18 : 1;
+    material.opacity = dimmed ? DIMMED_FILL_OPACITY : 1;
     material.depthWrite = !dimmed;
+    material.needsUpdate = true;
 
+    edges.color.copy( getPlacementEdgeColor( mesh.userData.packingColor ) );
     edges.transparent = dimmed;
-    edges.opacity = dimmed ? 0.12 : 1;
+    edges.opacity = dimmed ? DIMMED_EDGE_OPACITY : 1;
+    edges.depthWrite = !dimmed;
+    edges.needsUpdate = true;
   } );
 }
 

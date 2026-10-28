@@ -155,13 +155,15 @@ function refreshCartonView() {
     setCartonGroupVisible( group, focusedCartonIndex === null || index === focusedCartonIndex );
   } );
 
+  // Show the packing bars before framing so the camera can sit above them.
+  updatePackingStep();
+
   const object = visibleCartonObject();
   if ( object ) {
     fitViewToObject( object, visibleCartons() );
   }
 
   updateCartonInfoUI( loadedCartons, loadedRejects, focusedCartonIndex );
-  updatePackingStep();
 }
 
 function viewCarton( cartonIndex ) {
