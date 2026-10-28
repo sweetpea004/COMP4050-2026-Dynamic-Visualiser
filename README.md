@@ -12,10 +12,10 @@ A packer can rotate, pan and zoom around the cartons, focus on one carton at a t
 
 | Name | Role |
 | ---- | ---- |
-| Persephone | Product Owner, Developer ||
-| Mohamad | Minute Taker, Developer, Tester ||
-| Aryan | Scrum Master, Developer ||
-| Sarah | Developer, Tester | |
+| Persephone | Product Owner, Developer |
+| Mohamad | Minute Taker, Developer, Tester |
+| Aryan | Scrum Master, Developer |
+| Sarah | Developer, Tester |
 
 ## How to Use
 
@@ -66,6 +66,7 @@ In the side panel:
 
 - **Contents** expands a carton to list its items. **Collapse** hides them again.
 - **Focus** (shown when there are two or more cartons) shows only that carton. **Back** returns to all cartons.
+- While a carton is focused, the **packing steps** bar appears. **Next** and **Previous** step through the items in packing order, showing the current item solid and the rest see-through, with a progress bar. **Exit** returns to all cartons.
 - Ticking the **checkbox** next to an item outlines that item in the 3D scene.
 
 ### Solution JSON format
@@ -232,12 +233,12 @@ npx playwright test --project=desktop-chromium -g "Focus"
 | File | Covers |
 | ---- | ------ |
 | `coords.test.js` | mm → cm conversion and the Z-up → Y-up axis swap |
-| `cartons.test.js` | Carton layout and gaps, golden-ratio colouring, same `item_ref` → same colour, mesh counts, labels, highlighting, show/hide. Also builds every fixture and checks each item sits inside its carton. |
+| `cartons.test.js` | Carton layout and gaps, golden-ratio colouring, same `item_ref` → same colour, mesh counts, labels, highlighting, show/hide, packing-step dimming. Also builds every fixture and checks each item sits inside its carton. |
 | `solution.test.js` | Fetching and error statuses, `?solution=` allow-list (same origin and loopback allowed; other hosts, `javascript:` and `data:` blocked) |
 | `cartonInfo.test.js` | Legend contents, weights in kg, tags, reject list, empty state, Focus/Back, Contents toggle, highlight checkboxes, error messages |
-| `fixtures.test.js` | Every fixture has the fields the Visualiser reads, items fit in their carton without overlapping, and `contents_mass` matches the item masses |
+| `fixtures.test.js` | Every fixture has the fields the Visualiser reads, items fit in their carton without overlapping, items are listed in packing (`sequence`) order, and `contents_mass` matches the item masses |
 
-**Browser tests** ([tests/e2e/](tests/e2e/)) open the real app in Chromium at desktop and mobile (Pixel 7) sizes. They load every fixture and check the scene and the legend, drag and scroll to move the camera, use Focus/Back and Contents, check scrolling and the mobile layout, and check the error messages for a missing file, broken JSON, a server error and a blocked `?solution=` host. Any uncaught error in the page fails the test.
+**Browser tests** ([tests/e2e/](tests/e2e/)) open the real app in Chromium at desktop and mobile (Pixel 7) sizes. They load every fixture and check the scene and the legend, drag and scroll to move the camera, use Focus/Back and Contents, step through the LEGO packing steps (Next, Previous, wrap-around, Exit), check scrolling and the mobile layout, and check the error messages for a missing file, broken JSON, a server error and a blocked `?solution=` host. Any uncaught error in the page fails the test.
 
 ### Requirement coverage
 
@@ -251,8 +252,9 @@ npx playwright test --project=desktop-chromium -g "Focus"
 | Req06 Error handling | `solution.test.js`, `cartonInfo.test.js` | error handling |
 | Req07 Item colouring | `cartons.test.js`, `cartonInfo.test.js` | — |
 | Req09 Single box view | `cartonInfo.test.js` | focus on one carton |
+| Req10 LEGO packing steps | `cartons.test.js`, `fixtures.test.js` | LEGO packing steps |
 
-Req08 and Req10 are not built yet, so they have no tests.
+Req08 is not built yet, so it has no tests.
 
 ### Adding tests
 

@@ -176,6 +176,90 @@ test.describe( 'focus on one carton (Req09)', () => {
   } );
 } );
 
+test.describe( 'LEGO packing steps (Req10)', () => {
+  const steps = ( page ) => page.getByRole( 'region', { name: 'Step-by-step packing instructions' } );
+  const progressLabel = ( page ) => page.locator( '#packing-progress-label' );
+  const stepName = ( page ) => page.locator( '#packing-step-name' );
+  const progressValue = ( page ) => page.locator( '#packing-progress' ).evaluate( ( el ) => [ el.value, el.max ] );
+
+  async function focusCarton( page, name, cartonId ) {
+    await open( page, name );
+    await aside( page ).getByRole( 'button', { name: `Focus on box ${ cartonId }` } ).click();
+    await expect( steps( page ) ).toBeVisible();
+  }
+
+  test( 'are hidden until a carton is focused', async ( { page } ) => {
+    await open( page, '03_multi_carton.json' );
+    await expect( aside( page ).locator( 'details.carton-info-entry' ) ).toHaveCount( 2 );
+    await expect( steps( page ) ).toBeHidden();
+  } );
+
+  test( 'start on the completed view with a full progress bar', async ( { page } ) => {
+    await focusCarton( page, '03_multi_carton.json', 'c1' );
+    await expect( progressLabel( page ) ).toHaveText( 'Completed' );
+    await expect( stepName( page ) ).toHaveText( 'All items' );
+    const total = fixture( '03_multi_carton.json' ).cartons[ 0 ].placements.length;
+    expect( await progressValue( page ) ).toEqual( [ total, total ] );
+  } );
+
+  test( 'Next steps through every item in packing order, then back to completed', async ( { page } ) => {
+    const placements = fixture( '03_multi_carton.json' ).cartons[ 0 ].placements;
+    await focusCarton( page, '03_multi_carton.json', 'c1' );
+    const next = steps( page ).getByRole( 'button', { name: /Next/ } );
+
+    for ( let i = 0; i < placements.length; i++ ) {
+      await next.click();
+      await expect( progressLabel( page ) ).toHaveText( `Step ${ i + 1 } of ${ placements.length }` );
+      await expect( stepName( page ) ).toHaveText( placements[ i ].item_ref );
+      expect( await progressValue( page ) ).toEqual( [ i + 1, placements.length ] );
+    }
+
+    await next.click();
+    await expect( progressLabel( page ) ).toHaveText( 'Completed' );
+  } );
+
+  test( 'Previous from the completed view wraps to the last item', async ( { page } ) => {
+    const placements = fixture( '03_multi_carton.json' ).cartons[ 1 ].placements;
+    await focusCarton( page, '03_multi_carton.json', 'c2' );
+    await steps( page ).getByRole( 'button', { name: /Previous/ } ).click();
+    await expect( progressLabel( page ) ).toHaveText( `Step ${ placements.length } of ${ placements.length }` );
+    await expect( stepName( page ) ).toHaveText( placements.at( -1 ).item_ref );
+  } );
+
+  test( 'Exit returns to all cartons and hides the steps', async ( { page } ) => {
+    await focusCarton( page, '03_multi_carton.json', 'c1' );
+    await steps( page ).getByRole( 'button', { name: /Next/ } ).click();
+    await steps( page ).getByRole( 'button', { name: 'Exit' } ).click();
+    await expect( steps( page ) ).toBeHidden();
+    await expect( aside( page ).locator( 'details.carton-info-entry' ) ).toHaveCount( 2 );
+    await expect( sceneLabels( page ).filter( { visible: true } ) ).toHaveText( [ 'c1', 'c2' ] );
+  } );
+
+  test( 'the sidebar Back button also hides the steps', async ( { page } ) => {
+    await focusCarton( page, '03_multi_carton.json', 'c1' );
+    await aside( page ).getByRole( 'button', { name: 'Back to all cartons' } ).click();
+    await expect( steps( page ) ).toBeHidden();
+  } );
+
+  test( 'restart from the completed view when another carton is focused', async ( { page } ) => {
+    await focusCarton( page, '03_multi_carton.json', 'c1' );
+    await steps( page ).getByRole( 'button', { name: /Next/ } ).click();
+    await steps( page ).getByRole( 'button', { name: 'Exit' } ).click();
+    await aside( page ).getByRole( 'button', { name: 'Focus on box c2' } ).click();
+    await expect( progressLabel( page ) ).toHaveText( 'Completed' );
+  } );
+
+  test( 'stay on screen', async ( { page } ) => {
+    await focusCarton( page, '09_large_order.json', 'c1' );
+    const box = await steps( page ).boundingBox();
+    const viewport = page.viewportSize();
+    expect( box.x ).toBeGreaterThanOrEqual( 0 );
+    expect( box.y ).toBeGreaterThanOrEqual( 0 );
+    expect( box.x + box.width ).toBeLessThanOrEqual( viewport.width );
+    expect( box.y + box.height ).toBeLessThanOrEqual( viewport.height );
+  } );
+} );
+
 test.describe( 'error handling (Req06)', () => {
   test( 'shows "File Not Found" for a missing solution file', async ( { page } ) => {
     // Vite's dev server answers unknown paths with index.html, so stub a real 404

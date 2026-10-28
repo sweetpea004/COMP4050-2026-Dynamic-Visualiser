@@ -10,6 +10,7 @@ import {
   isPlacementHighlighted,
   resetCartonBuildState,
   setCartonGroupVisible,
+  setCartonInstructionStep,
   setPlacementHighlighted,
 } from '../../js/cartons.js';
 import { fixtureNames, loadFixture } from './fixtures.js';
@@ -160,6 +161,55 @@ describe( 'placement highlighting', () => {
   it( 'ignores indexes that do not exist', () => {
     expect( () => setPlacementHighlighted( 99, true ) ).not.toThrow();
     expect( isPlacementHighlighted( 99 ) ).toBe( false );
+  } );
+} );
+
+describe( 'setCartonInstructionStep (Req10)', () => {
+  function buildThree() {
+    const { cartonGroups } = buildCartonGroups( [ carton( 'c1', [ 300, 100, 100 ], [
+      placement( 'A', [ 0, 0, 0 ], [ 100, 100, 100 ] ),
+      placement( 'B', [ 100, 0, 0 ], [ 100, 100, 100 ] ),
+      placement( 'C', [ 200, 0, 0 ], [ 100, 100, 100 ] ),
+    ] ) ] );
+    const group = cartonGroups[ 0 ];
+    return { group, meshes: group.userData.placementMeshes };
+  }
+
+  const isSolid = ( mesh ) => mesh.material.transparent === false && mesh.material.opacity === 1;
+  const isDimmed = ( mesh ) => mesh.material.transparent === true && mesh.material.opacity < 0.5;
+
+  it( 'keeps one mesh per placement in packing order', () => {
+    const { group, meshes } = buildThree();
+    expect( meshes ).toHaveLength( 3 );
+    expect( meshes ).toEqual( group.children.slice( 1 ) );
+  } );
+
+  it( 'shows every item solid at step 0 (completed view)', () => {
+    const { group, meshes } = buildThree();
+    setCartonInstructionStep( group, 0 );
+    expect( meshes.every( isSolid ) ).toBe( true );
+  } );
+
+  it( 'shows only the current item solid and dims the rest', () => {
+    const { group, meshes } = buildThree();
+    setCartonInstructionStep( group, 2 );
+    expect( isDimmed( meshes[ 0 ] ) ).toBe( true );
+    expect( isSolid( meshes[ 1 ] ) ).toBe( true );
+    expect( isDimmed( meshes[ 2 ] ) ).toBe( true );
+  } );
+
+  it( 'restores the original colours when going back to step 0', () => {
+    const { group, meshes } = buildThree();
+    const before = meshes.map( ( m ) => m.material.color.getHex() );
+    setCartonInstructionStep( group, 1 );
+    setCartonInstructionStep( group, 3 );
+    setCartonInstructionStep( group, 0 );
+    expect( meshes.map( ( m ) => m.material.color.getHex() ) ).toEqual( before );
+    expect( meshes.every( isSolid ) ).toBe( true );
+  } );
+
+  it( 'does nothing for a missing group', () => {
+    expect( () => setCartonInstructionStep( undefined, 1 ) ).not.toThrow();
   } );
 } );
 

@@ -79,6 +79,13 @@ describe.each( fixtureNames )( 'fixture %s', ( name ) => {
     }
   } );
 
+  it( 'lists placements in packing order (the LEGO steps follow array order)', () => {
+    for ( const carton of data.cartons ) {
+      const seq = carton.placements.map( ( p ) => p.sequence );
+      expect( seq ).toEqual( [ ...seq ].sort( ( a, b ) => a - b ) );
+    }
+  } );
+
   it( 'has contents_mass equal to the sum of placement masses', () => {
     for ( const carton of data.cartons ) {
       const total = carton.placements.reduce( ( sum, p ) => sum + p.mass, 0 );
