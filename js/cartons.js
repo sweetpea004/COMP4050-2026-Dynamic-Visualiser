@@ -7,6 +7,10 @@ import { jsonDimsToThree, jsonMinCornerToThreeCenter } from './coords.js';
 export const CARTON_GAP = 5; // cm between cartons when laying out 2+
 const CARTON_DIM_PADDING = 0.05; // cm added to each carton axis to avoid z-clipping with placements
 const HIGHLIGHT_RENDER_ORDER = 20;
+// Non-current packing boxes are a faint unlit glass so the current step stays visible through them.
+const DIMMED_FILL = 0xf7f9fb;
+const DIMMED_FILL_OPACITY = 0.06;
+const DIMMED_EDGE_OPACITY = 0.28;
 
 let placementColorSeed = 0;
 const itemRefColors = new Map();
@@ -155,7 +159,9 @@ function createPlacementMesh( placement ) {
   outline.visible = false;
   mesh.add( outline );
   mesh.userData.outline = outline;
-  placementMeshes.push( mesh );
+mesh.userData.packingColor = color.clone();
+mesh.userData.packingEdges = edges;
+placementMeshes.push( mesh );
 
   return mesh;
 }
@@ -165,11 +171,51 @@ export function createCartonGroup( carton, minCorner ) {
   group.position.copy( minCorner );
   group.add( createCartonMesh( carton ) );
 
+  group.userData.placementMeshes = [];
+
   for ( const placement of carton.placements ?? [] ) {
-    group.add( createPlacementMesh( placement ) );
+    const mesh = createPlacementMesh( placement );
+    group.add( mesh );
+    group.userData.placementMeshes.push( mesh );
   }
 
   return group;
+}
+
+// Highlight one item at a time for packing instructions.
+// Step 0 shows the completed carton with all items coloured.
+export function setCartonInstructionStep( group, step = 0 ) {
+  if ( !group ) return;
+
+  const meshes = group.userData.placementMeshes ?? [];
+
+  meshes.forEach( ( mesh, index ) => {
+    const dimmed = step > 0 && index !== step - 1;
+
+    const material = mesh.material;
+    const edges = mesh.userData.packingEdges.material;
+
+    if ( dimmed ) {
+      // Black diffuse plus a light emissive ignores scene lighting, so shadowed faces
+      // do not turn into a grey wall in front of the current step.
+      material.color.setHex( 0x000000 );
+      material.emissive.setHex( DIMMED_FILL );
+    } else {
+      material.color.copy( mesh.userData.packingColor );
+      material.emissive.setHex( 0x000000 );
+    }
+
+    material.transparent = dimmed;
+    material.opacity = dimmed ? DIMMED_FILL_OPACITY : 1;
+    material.depthWrite = !dimmed;
+    material.needsUpdate = true;
+
+    edges.color.copy( getPlacementEdgeColor( mesh.userData.packingColor ) );
+    edges.transparent = dimmed;
+    edges.opacity = dimmed ? DIMMED_EDGE_OPACITY : 1;
+    edges.depthWrite = !dimmed;
+    edges.needsUpdate = true;
+  } );
 }
 
 export function setCartonGroupVisible( group, visible ) {
