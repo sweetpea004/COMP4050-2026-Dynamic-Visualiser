@@ -12,9 +12,9 @@ A packer can rotate, pan and zoom around the cartons, focus on one carton at a t
 
 | Name | Role |
 | ---- | ---- |
-| Persephone | | Product Owner, Developer |
-| Mohamad || Minute Taker, Developer, Tester |
-| Aryan | | Scrum Master, Developer |
+| Persephone | Product Owner, Developer ||
+| Mohamad | Minute Taker, Developer, Tester ||
+| Aryan | Scrum Master, Developer ||
 | Sarah | Developer, Tester | |
 
 ## How to Use
