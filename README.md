@@ -6,7 +6,7 @@
 
 The Dynamic Visualiser is the 3D viewer for our COMP4050 packing system. The Solver works out how an order's items should be packed into cartons and writes the result as a JSON solution file. The Visualiser reads that file and shows it as an interactive 3D scene, with every carton drawn to scale and every item placed where the Solver put it.
 
-A packer can rotate, pan and zoom around the cartons, focus on one carton at a time, and highlight individual items. A side panel lists each carton's contents (item, label, weight, tags) and any items the Solver could not pack, with the reason. If the solution file is missing or broken, the Visualiser shows a clear error instead of an empty scene.
+A packer can rotate, pan and zoom around the cartons, focus on one carton at a time, step through its packing order item by item, highlight individual items and show arrows for each item's orientation. A side panel lists each carton's contents (item, label, weight, tags) and any items the Solver could not pack, with the reason. When they are finished, **Done** or **Cancel** sends them back to the Portal with the order ID and whether it was completed. If the solution file is missing or broken, the Visualiser shows a clear error instead of an empty scene.
 
 ## Team Contributors and Roles
 
@@ -52,6 +52,16 @@ http://localhost:5173/?solution=/fixtures/03_multi_carton.json
 
 For safety, `?solution=` only accepts files from the same site or from `localhost` / `127.0.0.1` / `[::1]`. Anything else is ignored and the default file is loaded.
 
+### Returning to the Portal
+
+**Done** and **Cancel** go to the address in the canvas's `data-portal-url` attribute (default `/portal`). Add `?portal=` to the URL to use a different address, with the same safety rules as `?solution=`:
+
+```
+http://localhost:5173/?solution=/fixtures/03_multi_carton.json&portal=/my-portal
+```
+
+The Visualiser adds `OrderID` (from the solution's `order_id`) and `complete` (`true` for Done, `false` for Cancel), for example `/portal?OrderID=FIX-03&complete=true`.
+
 The [fixtures/](fixtures/) folder has sample solutions for common cases: a single item, multiple cartons, rejected items, all items rejected, a large order and a 250-item bulk order.
 
 ### Controls
@@ -68,6 +78,11 @@ In the side panel:
 - **Focus** (shown when there are two or more cartons) shows only that carton. **Back** returns to all cartons.
 - While a carton is focused, the **packing steps** bar appears. **Next** and **Previous** step through the items in packing order, showing the current item solid and the rest see-through, with a progress bar. **Exit** returns to all cartons.
 - Ticking the **checkbox** next to an item outlines that item in the 3D scene.
+- **Show item orientation arrows** shows a red arrow on every item, pointing in the direction of its `orientation`.
+
+At the top right:
+
+- **Done** marks the order as complete and **Cancel** marks it as incomplete. Both ask for confirmation first (**Go Back** or <kbd>Esc</kbd> closes the dialog), then return to the Portal. They are disabled if the solution failed to load.
 
 ### Solution JSON format
 
@@ -75,6 +90,7 @@ Lengths are in millimetres and masses in grams. The Solver uses a Z-up coordinat
 
 ```jsonc
 {
+  "order_id": "FIX-01",                  // sent back to the Portal by Done / Cancel
   "cartons": [
     {
       "carton_id": "c1",
@@ -88,6 +104,7 @@ Lengths are in millimetres and masses in grams. The Solver uses a Z-up coordinat
           "position": [0, 0, 0],         // min corner, mm
           "dims": [180, 120, 90],        // mm
           "mass": 640,                   // g
+          "orientation": 0,              // 0-5, shown by the orientation arrows
           "tags": ["fragile"]
         }
       ]
@@ -142,13 +159,15 @@ These are requirements that surpass the MVP.
 
 ```
 .
-├── index.html               # Page shell: <aside> legend + <canvas data-json="...">
-├── visualiser.js            # Entry point: loads the solution, builds the scene, wires up the legend
+├── index.html               # Page shell: <aside> legend, Done/Cancel + dialog, <canvas data-json data-portal-url>
+├── visualiser.js            # Entry point: loads the solution, builds the scene, wires up the legend, packing steps and Done/Cancel
 ├── visualiser_styles.css    # Layout for desktop and mobile
 ├── js/
-│   ├── solution.js          # Picks the solution file (data-json or ?solution=) and fetches it
+│   ├── solution.js          # Picks the solution file (data-json or ?solution=) and fetches it; shared URL safety check
 │   ├── coords.js            # Solver (Z-up, mm) → Three.js (Y-up, cm) conversions
-│   ├── cartons.js           # Builds carton and item meshes, colours, highlighting, carton layout
+│   ├── cartons.js           # Builds carton and item meshes, colours, highlighting, carton layout, packing-step dimming
+│   ├── orientation.js       # Orientation arrows drawn on each item
+│   ├── portalActions.js     # Done / Cancel buttons, confirmation dialog, return to the Portal
 │   ├── scene.js             # Three.js scene, camera, lights, controls, platform, render loop
 │   └── cartonInfo.js        # The <aside> legend: cartons, items, rejects, Focus/Back, errors
 ├── fixtures/                # Sample Solver outputs used for development and tests
@@ -169,9 +188,11 @@ flowchart LR
 
     subgraph Visualiser["Dynamic Visualiser (browser)"]
         HTML["index.html<br/>&lt;canvas data-json&gt; + &lt;aside&gt;"]
-        Main["visualiser.js<br/>entry point and view state"]
+        Main["visualiser.js<br/>entry point, view state,<br/>packing steps bar"]
         Solution["solution.js<br/>solutionSource() / loadSceneData()"]
-        Cartons["cartons.js<br/>meshes, colours, layout, highlight"]
+        Cartons["cartons.js<br/>meshes, colours, layout,<br/>highlight, step dimming"]
+        Orientation["orientation.js<br/>orientation arrows"]
+        PortalActions["portalActions.js<br/>Done / Cancel + confirm"]
         Coords["coords.js<br/>Z-up mm → Y-up cm"]
         Scene["scene.js<br/>scene, camera, controls, render loop"]
         Info["cartonInfo.js<br/>&lt;aside&gt; legend and errors"]
@@ -183,6 +204,12 @@ flowchart LR
     Solution -- "fetch" --> File
     Main -- "buildCartonGroups()" --> Cartons
     Cartons --> Coords
+    Cartons --> Orientation
+    Main -- "setCartonInstructionStep()" --> Cartons
+    Main -- "initPortalActions()" --> PortalActions
+    PortalActions -- "OrderID, complete" --> Portal
+    PortalActions -- "resolveAllowedUrl()" --> Solution
+    Info -- "orientation checkbox" --> Main
     Main -- "fitViewToObject()" --> Scene
     Main -- "updateCartonInfoUI()<br/>renderCartonInfoError()" --> Info
     Info -- "Focus / Back clicks" --> Main
@@ -198,6 +225,8 @@ How a solution gets on screen:
 3. `cartons.js` builds a Three.js group per carton, laid out in a row along X, with one coloured mesh per item. `coords.js` converts the Solver's coordinates.
 4. `scene.js` sizes the floor platform and points the camera at the visible cartons.
 5. `cartonInfo.js` renders the legend. Clicking **Focus** or **Back** calls back into `visualiser.js`, which hides or shows carton groups and reframes the camera.
+6. While a carton is focused, `visualiser.js` shows the packing steps bar. **Next** / **Previous** call `setCartonInstructionStep()`, which keeps the current item solid and makes the rest see-through.
+7. **Done** / **Cancel** (`portalActions.js`) ask for confirmation, then go to the Portal address with `OrderID` and `complete` added.
 
 ## Testing
 
@@ -233,12 +262,13 @@ npx playwright test --project=desktop-chromium -g "Focus"
 | File | Covers |
 | ---- | ------ |
 | `coords.test.js` | mm → cm conversion and the Z-up → Y-up axis swap |
-| `cartons.test.js` | Carton layout and gaps, golden-ratio colouring, same `item_ref` → same colour, mesh counts, labels, highlighting, show/hide, packing-step dimming. Also builds every fixture and checks each item sits inside its carton. |
-| `solution.test.js` | Fetching and error statuses, `?solution=` allow-list (same origin and loopback allowed; other hosts, `javascript:` and `data:` blocked) |
-| `cartonInfo.test.js` | Legend contents, weights in kg, tags, reject list, empty state, Focus/Back, Contents toggle, highlight checkboxes, error messages |
+| `cartons.test.js` | Carton layout and gaps, golden-ratio colouring, same `item_ref` → same colour, mesh counts, labels, highlighting, show/hide, packing-step dimming, orientation arrows (hidden by default, direction per orientation, show/hide). Also builds every fixture and checks each item sits inside its carton. |
+| `solution.test.js` | Fetching and error statuses, `?solution=` and shared `resolveAllowedUrl()` allow-list (same origin and loopback allowed; other hosts, `javascript:` and `data:` blocked) |
+| `cartonInfo.test.js` | Legend contents, weights in kg, tags, reject list, empty state, Focus/Back, Contents toggle, highlight checkboxes, orientation arrows checkbox, error messages |
+| `portalActions.test.js` | Done/Cancel confirmation dialog: titles, Go Back, Escape, clicking outside, focus, disabling the buttons |
 | `fixtures.test.js` | Every fixture has the fields the Visualiser reads, items fit in their carton without overlapping, items are listed in packing (`sequence`) order, and `contents_mass` matches the item masses |
 
-**Browser tests** ([tests/e2e/](tests/e2e/)) open the real app in Chromium at desktop and mobile (Pixel 7) sizes. They load every fixture and check the scene and the legend, drag and scroll to move the camera, use Focus/Back and Contents, step through the LEGO packing steps (Next, Previous, wrap-around, Exit), check scrolling and the mobile layout, and check the error messages for a missing file, broken JSON, a server error and a blocked `?solution=` host. Any uncaught error in the page fails the test.
+**Browser tests** ([tests/e2e/](tests/e2e/)) open the real app in Chromium at desktop and mobile (Pixel 7) sizes. They load every fixture and check the scene and the legend, drag and scroll to move the camera, use Focus/Back and Contents, step through the LEGO packing steps (Next, Previous, wrap-around, Exit), confirm Done and Cancel and check the Portal receives the right `OrderID` and `complete` (including `?portal=` and blocked off-site addresses), toggle the orientation arrows, check that Done/Cancel don't cover the sidebar or packing steps, check scrolling and the mobile layout, and check the error messages for a missing file, broken JSON, a server error and a blocked `?solution=` host. Any uncaught error in the page fails the test.
 
 ### Requirement coverage
 
@@ -251,10 +281,9 @@ npx playwright test --project=desktop-chromium -g "Focus"
 | Req05 Rejected items | `cartonInfo.test.js` | legend |
 | Req06 Error handling | `solution.test.js`, `cartonInfo.test.js` | error handling |
 | Req07 Item colouring | `cartons.test.js`, `cartonInfo.test.js` | — |
+| Req08 Done / Cancel to Portal | `portalActions.test.js`, `solution.test.js` | Done / Cancel back to the Portal |
 | Req09 Single box view | `cartonInfo.test.js` | focus on one carton |
 | Req10 LEGO packing steps | `cartons.test.js`, `fixtures.test.js` | LEGO packing steps |
-
-Req08 is not built yet, so it has no tests.
 
 ### Adding tests
 

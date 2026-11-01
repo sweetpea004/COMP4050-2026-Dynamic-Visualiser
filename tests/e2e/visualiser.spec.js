@@ -260,6 +260,127 @@ test.describe( 'LEGO packing steps (Req10)', () => {
   } );
 } );
 
+test.describe( 'Done / Cancel back to the Portal (Req08)', () => {
+  const dialog = ( page ) => page.getByRole( 'alertdialog' );
+  const button = ( page, name ) => page.getByRole( 'button', { name, exact: true } );
+
+  // Stand-in Portal so the redirect lands on a real page.
+  const stubPortal = ( page, path = '/portal' ) =>
+    mockPath( page, path, { status: 200, contentType: 'text/html', body: '<h1>Portal</h1>' } );
+
+  async function confirm( page, which ) {
+    await expect( aside( page ).locator( '.carton-info-entry' ).first() ).toBeVisible();
+    await button( page, which ).click();
+    await expect( dialog( page ) ).toBeVisible();
+    await dialog( page ).getByRole( 'button', { name: which === 'Done' ? 'Yes, done' : 'Yes, cancel' } ).click();
+  }
+
+  test( 'shows Done and Cancel once a solution loads', async ( { page } ) => {
+    await open( page, '03_multi_carton.json' );
+    await expect( button( page, 'Done' ) ).toBeEnabled();
+    await expect( button( page, 'Cancel' ) ).toBeEnabled();
+  } );
+
+  test( 'Done asks for confirmation, then returns OrderID and complete=true', async ( { page } ) => {
+    await stubPortal( page );
+    await open( page, '03_multi_carton.json' );
+    await confirm( page, 'Done' );
+    await page.waitForURL( '**/portal?*' );
+    const url = new URL( page.url() );
+    expect( url.searchParams.get( 'OrderID' ) ).toBe( fixture( '03_multi_carton.json' ).order_id );
+    expect( url.searchParams.get( 'complete' ) ).toBe( 'true' );
+  } );
+
+  test( 'Cancel asks for confirmation, then returns OrderID and complete=false', async ( { page } ) => {
+    await stubPortal( page );
+    await open( page, '06_partial_rejects.json' );
+    await confirm( page, 'Cancel' );
+    await page.waitForURL( '**/portal?*' );
+    const url = new URL( page.url() );
+    expect( url.searchParams.get( 'OrderID' ) ).toBe( fixture( '06_partial_rejects.json' ).order_id );
+    expect( url.searchParams.get( 'complete' ) ).toBe( 'false' );
+  } );
+
+  test( 'Go Back and Escape close the dialog without leaving the page', async ( { page } ) => {
+    await open( page, '03_multi_carton.json' );
+    await button( page, 'Done' ).click();
+    await dialog( page ).getByRole( 'button', { name: 'Go Back' } ).click();
+    await expect( dialog( page ) ).toBeHidden();
+
+    await button( page, 'Cancel' ).click();
+    await page.keyboard.press( 'Escape' );
+    await expect( dialog( page ) ).toBeHidden();
+    expect( new URL( page.url() ).pathname ).toBe( '/' );
+  } );
+
+  test( 'uses an allowed ?portal= address', async ( { page } ) => {
+    await stubPortal( page, '/custom-portal' );
+    await page.goto( '/?solution=/fixtures/01_single_item.json&portal=/custom-portal' );
+    await confirm( page, 'Done' );
+    await page.waitForURL( '**/custom-portal?*' );
+  } );
+
+  test( 'ignores an off-site ?portal= address and uses the default', async ( { page } ) => {
+    await stubPortal( page );
+    await page.goto( '/?solution=/fixtures/01_single_item.json&portal=https://evil.example.com/steal' );
+    await confirm( page, 'Done' );
+    await page.waitForURL( '**/portal?*' );
+    expect( new URL( page.url() ).hostname ).toBe( 'localhost' );
+  } );
+
+  test( 'disables Done and Cancel when the solution fails to load', async ( { page } ) => {
+    await mockPath( page, '/fixtures/does_not_exist.json', { status: 404, body: 'Not Found' } );
+    await open( page, 'does_not_exist.json' );
+    await expect( aside( page ) ).toContainText( 'Error: File Not Found' );
+    await expect( button( page, 'Done' ) ).toBeDisabled();
+    await expect( button( page, 'Cancel' ) ).toBeDisabled();
+  } );
+
+  test( 'do not cover the sidebar or the packing steps', async ( { page } ) => {
+    await open( page, '03_multi_carton.json' );
+    await aside( page ).getByRole( 'button', { name: 'Focus on box c1' } ).click();
+    const actions = await page.locator( '#portal-actions' ).boundingBox();
+    // Compare against the visible cards; #packing-steps itself is a large transparent wrapper.
+    for ( const selector of [ '#carton-info', '.packing-progress-row', '.packing-step-nav' ] ) {
+      const other = await page.locator( selector ).boundingBox();
+      const overlap = !( actions.x + actions.width <= other.x || other.x + other.width <= actions.x ||
+        actions.y + actions.height <= other.y || other.y + other.height <= actions.y );
+      expect( overlap, `#portal-actions overlaps ${ selector }` ).toBe( false );
+    }
+  } );
+} );
+
+test.describe( 'orientation arrows', () => {
+  const toggle = ( page ) => aside( page ).getByRole( 'checkbox', { name: 'Show item orientation arrows' } );
+  // The arrows are drawn in WebGL, so compare pictures of the 3D scene. The sidebar and
+  // buttons are masked out so the checkbox's own tick and focus ring don't count as a change.
+  const canvasShot = ( page ) => page.locator( '#visualiser-canvas' ).screenshot( {
+    mask: [ aside( page ), page.locator( '#portal-actions' ), page.locator( 'h1' ) ],
+  } );
+
+  test( 'appear when the checkbox is ticked and go when unticked', async ( { page } ) => {
+    await open( page, '01_single_item.json' );
+    await expect( sceneLabels( page ) ).toHaveCount( 1 );
+    await expect( toggle( page ) ).not.toBeChecked();
+    const without = await canvasShot( page );
+
+    await toggle( page ).check();
+    await expect.poll( async () => ( await canvasShot( page ) ).equals( without ) ).toBe( false );
+
+    await toggle( page ).uncheck();
+    await expect.poll( async () => ( await canvasShot( page ) ).equals( without ) ).toBe( true );
+  } );
+
+  test( 'stay ticked after focusing a carton and going back', async ( { page } ) => {
+    await open( page, '03_multi_carton.json' );
+    await toggle( page ).check();
+    await aside( page ).getByRole( 'button', { name: 'Focus on box c2' } ).click();
+    await expect( toggle( page ) ).toBeChecked();
+    await aside( page ).getByRole( 'button', { name: 'Back to all cartons' } ).click();
+    await expect( toggle( page ) ).toBeChecked();
+  } );
+} );
+
 test.describe( 'error handling (Req06)', () => {
   test( 'shows "File Not Found" for a missing solution file', async ( { page } ) => {
     // Vite's dev server answers unknown paths with index.html, so stub a real 404

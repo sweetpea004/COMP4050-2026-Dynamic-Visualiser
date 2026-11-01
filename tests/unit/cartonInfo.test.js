@@ -15,7 +15,7 @@ async function setup() {
   cartons = await import( '../../js/cartons.js' );
   ui = await import( '../../js/cartonInfo.js' );
   panel = document.getElementById( 'carton-info' );
-  handlers = { onViewCarton: vi.fn(), onShowAll: vi.fn() };
+  handlers = { onViewCarton: vi.fn(), onShowAll: vi.fn(), onToggleOrientation: vi.fn() };
   ui.initCartonInfo( handlers );
 }
 
@@ -201,6 +201,41 @@ describe( 'contents toggle and highlighting', () => {
     render( data, 1 );
     const first = Number( panel.querySelector( '.placement-highlight-toggle' ).dataset.placementIndex );
     expect( first ).toBe( data.cartons[ 0 ].placements.length );
+  } );
+} );
+
+describe( 'orientation arrows checkbox', () => {
+  const toggle = () => panel.querySelector( '#orientation-visibility-toggle' );
+
+  it( 'is shown unticked by default', () => {
+    render( loadFixture( '03_multi_carton.json' ) );
+    expect( toggle() ).not.toBeNull();
+    expect( toggle().checked ).toBe( false );
+    expect( toggle().closest( 'label' ).textContent ).toContain( 'Show item orientation arrows' );
+  } );
+
+  it( 'stays ticked across re-renders when arrows are on', () => {
+    const data = loadFixture( '03_multi_carton.json' );
+    cartons.buildCartonGroups( data.cartons );
+    ui.updateCartonInfoUI( data.cartons, data.rejects, 1, true );
+    expect( toggle().checked ).toBe( true );
+  } );
+
+  it( 'calls onToggleOrientation when ticked and unticked', () => {
+    render( loadFixture( '03_multi_carton.json' ) );
+    toggle().checked = true;
+    toggle().dispatchEvent( new Event( 'change', { bubbles: true } ) );
+    expect( handlers.onToggleOrientation ).toHaveBeenLastCalledWith( true );
+    toggle().checked = false;
+    toggle().dispatchEvent( new Event( 'change', { bubbles: true } ) );
+    expect( handlers.onToggleOrientation ).toHaveBeenLastCalledWith( false );
+  } );
+
+  it( 'does not toggle any item highlight', () => {
+    render( loadFixture( '03_multi_carton.json' ) );
+    toggle().checked = true;
+    toggle().dispatchEvent( new Event( 'change', { bubbles: true } ) );
+    expect( cartons.isPlacementHighlighted( 0 ) ).toBe( false );
   } );
 } );
 

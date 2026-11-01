@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { loadSceneData, solutionSource } from '../../js/solution.js';
+import { loadSceneData, resolveAllowedUrl, solutionSource } from '../../js/solution.js';
 
 describe( 'loadSceneData (Req01)', () => {
   afterEach( () => {
@@ -92,5 +92,29 @@ describe( 'solutionSource', () => {
     setQuery( `?solution=${ encodeURIComponent( 'http://[bad' ) }` );
     expect( solutionSource( canvas ) ).toBe( '/fixtures/default.json' );
     expect( console.error ).toHaveBeenCalled();
+  } );
+} );
+
+describe( 'resolveAllowedUrl (shared by ?solution= and ?portal=)', () => {
+  beforeEach( () => {
+    vi.spyOn( console, 'error' ).mockImplementation( () => {} );
+  } );
+
+  it( 'returns the fallback when nothing is requested', () => {
+    expect( resolveAllowedUrl( null, '/portal' ) ).toBe( '/portal' );
+    expect( resolveAllowedUrl( '', '/portal' ) ).toBe( '/portal' );
+  } );
+
+  it( 'resolves a same-origin path against the page', () => {
+    expect( resolveAllowedUrl( '/orders/done', '/portal' ) ).toBe( `${ window.location.origin }/orders/done` );
+  } );
+
+  it( 'allows loopback hosts', () => {
+    expect( resolveAllowedUrl( 'http://127.0.0.1:9000/p', '/portal' ) ).toBe( 'http://127.0.0.1:9000/p' );
+  } );
+
+  it( 'falls back for other hosts and non-http URLs', () => {
+    expect( resolveAllowedUrl( 'https://evil.example.com/p', '/portal' ) ).toBe( '/portal' );
+    expect( resolveAllowedUrl( 'javascript:alert(1)', '/portal' ) ).toBe( '/portal' );
   } );
 } );

@@ -555,7 +555,7 @@ canvas {
 /* Mobile layout */
 @media (max-width: 768px) {
   #packing-steps {
-    top: 2.5rem;
+    top: 4rem; /* below the Done / Cancel buttons */
     right: 0.75rem;
     bottom: calc(min(48dvh, 24rem) + 1.75rem);
     left: 0.75rem;

@@ -11,6 +11,7 @@ import {
   resetCartonBuildState,
   setCartonGroupVisible,
   setCartonInstructionStep,
+  setOrientationMarkersVisible,
   setPlacementHighlighted,
 } from '../../js/cartons.js';
 import { fixtureNames, loadFixture } from './fixtures.js';
@@ -213,6 +214,70 @@ describe( 'setCartonInstructionStep (Req10)', () => {
   } );
 } );
 
+describe( 'orientation markers', () => {
+  // Each item mesh has its edge lines, its highlight outline and one marker group.
+  function markersOf( group ) {
+    return group.userData.placementMeshes.map( ( mesh ) => mesh.children.find( ( child ) => child.isGroup ) );
+  }
+
+  function build( orientations ) {
+    const placements = orientations.map( ( orientation, i ) => ( {
+      ...placement( `O${ i }`, [ i * 100, 0, 0 ], [ 100, 100, 100 ] ),
+      orientation,
+    } ) );
+    return buildCartonGroups( [ carton( 'c1', [ orientations.length * 100, 100, 100 ], placements ) ] ).cartonGroups[ 0 ];
+  }
+
+  it( 'adds one hidden marker per placement', () => {
+    const markers = markersOf( build( [ 0, 1, 2 ] ) );
+    expect( markers ).toHaveLength( 3 );
+    markers.forEach( ( marker ) => expect( marker.visible ).toBe( false ) );
+  } );
+
+  it( 'shows and hides every marker together', () => {
+    const markers = markersOf( build( [ 0, 3, 5 ] ) );
+    setOrientationMarkersVisible( true );
+    markers.forEach( ( marker ) => expect( marker.visible ).toBe( true ) );
+    setOrientationMarkersVisible( false );
+    markers.forEach( ( marker ) => expect( marker.visible ).toBe( false ) );
+  } );
+
+  it( 'draws each marker as a solid arrow (shaft + head) with no text label', () => {
+    const [ marker ] = markersOf( build( [ 4 ] ) );
+    const meshes = marker.children.filter( ( o ) => o.isMesh );
+    expect( meshes.map( ( m ) => m.geometry.type ) ).toEqual( [ 'CylinderGeometry', 'ConeGeometry' ] );
+    expect( marker.children.some( ( o ) => o.isCSS2DObject ) ).toBe( false );
+  } );
+
+  it( 'falls back to orientation 0 for a missing or unknown orientation', () => {
+    const [ missing, unknown ] = markersOf( build( [ undefined, 9 ] ) );
+    [ missing, unknown ].forEach( ( marker ) => {
+      expect( marker.position.clone().normalize().toArray().map( ( v ) => Math.round( v ) + 0 ) ).toEqual( [ 1, 0, 0 ] );
+    } );
+  } );
+
+  it.each( [
+    [ 0, [ 1, 0, 0 ] ],
+    [ 1, [ -1, 0, 0 ] ],
+    [ 2, [ 0, 1, 0 ] ],
+    [ 3, [ 0, -1, 0 ] ],
+    [ 4, [ 0, 0, 1 ] ],
+    [ 5, [ 0, 0, -1 ] ],
+  ] )( 'places the orientation %i marker outside the item along %j', ( orientation, direction ) => {
+    const [ marker ] = markersOf( build( [ orientation ] ) );
+    const unit = marker.position.clone().normalize().toArray().map( ( v ) => Math.round( v ) + 0 );
+    expect( unit ).toEqual( direction );
+    expect( marker.position.length() ).toBeGreaterThan( 5 ); // item is 10 cm, so half-size is 5
+  } );
+
+  it( 'is forgotten after a reset', () => {
+    const [ marker ] = markersOf( build( [ 0 ] ) );
+    resetCartonBuildState();
+    setOrientationMarkersVisible( true );
+    expect( marker.visible ).toBe( false );
+  } );
+} );
+
 describe( 'setCartonGroupVisible', () => {
   it( 'hides the group and its HTML label, then shows them again', () => {
     const { cartonGroups } = buildCartonGroups( [ carton( 'c1', [ 100, 100, 100 ] ) ] );
@@ -250,7 +315,9 @@ describe.each( fixtureNames )( 'scene built from fixture %s', ( name ) => {
       const [ cartonMesh, ...placements ] = group.children;
       const cartonBox = new THREE.Box3().setFromObject( cartonMesh, true ).expandByScalar( eps );
       placements.forEach( ( mesh ) => {
-        const box = new THREE.Box3().setFromObject( mesh, true );
+        // The item's own box only, not child markers (e.g. orientation arrows) that stick out.
+        mesh.geometry.computeBoundingBox();
+        const box = mesh.geometry.boundingBox.clone().applyMatrix4( mesh.matrixWorld );
         expect( cartonBox.containsBox( box ) ).toBe( true );
       } );
     } );
