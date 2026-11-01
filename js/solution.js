@@ -24,7 +24,7 @@ export function resolveAllowedUrl( requested, fallback ) {
     return fallback;
   }
 
-  const loopback = [ '127.0.0.1', 'localhost', '::1' ];
+  const loopback = [ '127.0.0.1', 'localhost', '[::1]' ]; // URL.hostname keeps the brackets on IPv6
   const allowed =
     target.origin === window.location.origin ||
     ( [ 'http:', 'https:' ].includes( target.protocol ) && loopback.includes( target.hostname ) );
