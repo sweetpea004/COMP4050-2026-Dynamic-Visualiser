@@ -1,7 +1,5 @@
 import * as THREE from 'three';
 
-import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-
 /*
  * Every placement in the solution JSON carries an `orientation` code (0-5) but
  * the solver doesn't document, anywhere in this repo, which physical rotation
@@ -36,13 +34,6 @@ const arrowMaterial = new THREE.MeshBasicMaterial( {
   transparent: true,
   toneMapped: false,
 } );
-
-function createOrientationLabel( orientation ) {
-  const element = document.createElement( 'div' );
-  element.className = 'label orientation-label';
-  element.textContent = `Orientation ${ orientation }`;
-  return new CSS2DObject( element );
-}
 
 /* Half the box's extent along whichever single axis `direction` points down — the
  * ORIENTATION_DIRECTIONS above are always axis-aligned, so exactly one component
@@ -81,10 +72,6 @@ export function createOrientationMarker( orientation, width, height, depth ) {
   head.position.y = shaftLength + headLength / 2;
   head.renderOrder = MARKER_RENDER_ORDER;
   group.add( head );
-
-  const label = createOrientationLabel( orientation );
-  label.position.set( 0, shaftLength + headLength + 0.6, 0 );
-  group.add( label );
 
   group.visible = false;
   return group;
